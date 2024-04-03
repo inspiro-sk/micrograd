@@ -11,6 +11,7 @@ class Value:
         return f"Value(data={self.data})"
     
     def __add__(self, other):
+        other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data + other.data, (self, other), '+')
         # now we want to propagate the gradient:
         def _backward():
@@ -21,15 +22,20 @@ class Value:
         return out
     
     def __mul__(self, other):
+        other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data * other.data, (self, other), '*')
         def _backward():
             self.grad += other.data * out.grad # += required to fix backpropagation bug when node is used more than once
             # in which case gradients accumulate so we need to add them, not set them - therefore += not =
             other.grad += self.data * out.grad
-
+            
         out._backward = _backward
         return out
     
+    # we can define rmul to swap the order of operands:
+    def __rmul__(self, other):
+        return self * other
+
     def tanh(self):
         x = self.data
         t = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
