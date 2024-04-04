@@ -15,10 +15,11 @@ class Value:
     def __add__(self, other):
         other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data + other.data, (self, other), '+')
+
         # now we want to propagate the gradient:
         def _backward():
-            self.grad += 1.0 * out.grad # local derivative of self in addition is 1.0
-            other.grad += 1.0 * out.grad
+            self.grad += out.grad
+            other.grad += out.grad
 
         out._backward = _backward
         return out
@@ -26,7 +27,7 @@ class Value:
     def __mul__(self, other):
         other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data * other.data, (self, other), '*')
-        
+
         def _backward():
             self.grad += other.data * out.grad # += required to fix backpropagation bug when node is used more than once
             # in which case gradients accumulate so we need to add them, not set them - therefore += not =
@@ -77,7 +78,7 @@ class Value:
         out = Value(self.data**other, (self,), f'**{other}')
 
         def _backward():
-            self.grad += other * (self.data**(other-1)) * out.grad
+            self.grad += (other * self.data**(other-1)) * out.grad
         
         out._backward = _backward
 
